@@ -1,0 +1,210 @@
+\documentclass[10pt,a4paper]{article}
+
+\ifx\pdfoutput\undefined\newcount\pdfoutput\fi
+
+\ifcase\pdfoutput
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\else
+\usepackage[OT4]{polski}
+\usepackage[pdftex]{graphicx}
+\usepackage[pdftex]{hyperref}
+\fi
+\usepackage[utf8]{inputenc}
+\usepackage[polish]{babel}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{verbatim}
+
+\setlength{\voffset}{0mm}
+\setlength{\textheight}{235mm}
+\setlength{\topmargin}{0mm}
+\setlength{\headheight}{0mm}
+\setlength{\headsep}{0mm}
+\setlength{\topskip}{0mm}
+\setlength{\footskip}{10mm}
+
+\setlength{\hoffset}{0mm}
+\setlength{\textwidth}{160mm}
+\setlength{\marginparwidth}{0mm}
+\setlength{\marginparsep}{0mm}
+\setlength{\oddsidemargin}{0mm}
+\setlength{\evensidemargin}{0mm}
+
+\renewcommand{\d}{\mathrm{d}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\tr}{\mathrm{tr}\,}
+
+\title{Regresja logistyczna}
+\author{Przemysław Olbratowski}
+
+\begin{document}
+
+\maketitle
+
+\thispagestyle{empty}
+
+\newpage
+
+\section{Prawdopodobieństwo przynależności do klas}
+
+$I$ próbek po $J$ cech układamy w macierz danych $Z_{ij}$. Każda próbka należy do jednej z $K$ klas. Wprowadzamy nieznane obciążenia $b_k$ oraz wagi $w_{jk}$. Wyznaczamy macierz aktywacji
+\begin{displaymath}
+A_{ik}=b_k+\sum_jZ_{ij}w_{jk}=b_k+Z_{i0}w_{0k}+Z_{i1}w_{1k}+...
+\end{displaymath}
+Do macierzy danych dodajemy po lewej kolumnę jedynek uzyskując tak zwaną design matrix $X_{ij}$
+\begin{displaymath}
+X_{i0}=1\quad X_{i1}=Z_{i0}\quad X_{i2}=Z_{i1}\quad...
+\end{displaymath}
+Macierz aktywacji przyjmuje wtedy postać
+\begin{displaymath}
+A_{ik}=X_{i0}b_k+X_{i1}w_{0k}+X_{i2}w_{1k}+...
+\end{displaymath}
+Zamiast obiążenia i wag wprowadzamy parametry $p_{jk}$
+\begin{displaymath}
+p_{0k}=b_k\quad p_{1k}=w_{0k}\quad p_{2k}=w_{1k}\quad...
+\end{displaymath}
+Ostatecznie macierz aktywacji wynosi
+\begin{displaymath}
+A_{ik}=X_{i0}p_{0k}+X_{i1}p_{1k}+X_{i2}w_{2k}+...=\sum_jX_{ij}p_{jk}
+\end{displaymath}
+Przyjmujemy, że prawdopodobieństwo przynależności próbki $i$ do klasy $k$ jest dane funkcją softmax
+\begin{displaymath}
+P_{ik}=\frac{\exp A_{ik}}{\sum_{k'}\exp A_{ik'}}
+\end{displaymath}
+Spełniony jest tu warunek normalizacji
+\begin{displaymath}
+\sum_kP_{ik}=1
+\end{displaymath}
+
+\section{Klasyfikacja}
+
+Znając $P_{ik}$ każdą próbkę $i$ klasyfikujemy do klasy
+\begin{displaymath}
+k_i=\underset{k}{\mathrm{argmax}}\,P_{ik}
+\end{displaymath}
+
+\section{Uczenie metodą największej wiarygodności}
+
+O każdej próbce uczącej $i$ wiemy, że należy do klasy $k_i$. Chcemy tak dobrać współczynniki $p_{jk}$ aby dla każdej próbki $i$ uzyskać jak największe prawdopodobieństwo jej przynależności do klasy $k_i$. Prawdopodobieństwo przynależności próbki $i$ do klasy $k_i$ wynosi
+\begin{displaymath}
+P_{ik_i}=\frac{\exp A_{ik_i}}{\sum_{k'}\exp A_{ik'}}
+\end{displaymath}
+Ze względu na statystyczną niezależność prawdopodobieństwo przynależności wszystkich próbek do swoich klas wynosi
+\begin{displaymath}
+P=\prod_iP_{ik_i}
+\end{displaymath}
+Wielkość $P$ rozumiana jako funkcja współczynników $p_{jk}$ to funkcja wiarygodności. Postępując metodą największej wiarygodności maksymalizujemy $P$ ze względu na $p_{jk}$. Wygodniej jest minimalizować funkcję straty równą
+\begin{displaymath}
+L=-\log P=-\log\prod_iP_{ik_i}=-\sum_i\log P_{ik_i}
+\end{displaymath}
+Wartość tej funkcji można obliczyć numerycznie jako
+\begin{displaymath}
+L=-\sum_{ik}\delta_{k_ik}\log P_{ik}
+\end{displaymath}
+gdzie $\delta_{k_ik}$ to tak zwana reprezentacja one-hot. Funkcję $L$ minimalizujemy numerycznie metodą gradientu
+
+\section{Gradient straty}
+
+Pochodne $L$ po $p_{jk}$ wynoszą
+\begin{displaymath}
+\frac{\partial L}{\partial p_{jk}}=-\sum_i\frac{1}{P_{ik_i}}\frac{\partial P_{ik_i}}{\partial p_{jk}}
+\end{displaymath}
+Ze wzoru na pochodną funkcji złożonej
+\begin{displaymath}
+\frac{\partial P_{ik_i}}{\partial p_{jk}}=\sum_{k'}\frac{\partial P_{ik_i}}{\partial A_{ik'}}\frac{\partial A_{ik'}}{\partial p_{jk}}
+\end{displaymath}
+Zajmijmy się pierwszym członem iloczynu
+\begin{displaymath}
+P_{ik_i}=\frac{\exp A_{ik_i}}{\sum_{k''}\exp A_{ik''}}
+\end{displaymath}
+Ze wzoru na pochodną ilorazu
+\begin{displaymath}
+\frac{\partial P_{ik_i}}{\partial A_{ik'}}=\frac{\exp A_{ik_i}\delta_{k_ik'}\sum_{k''}\exp A_{ik''}-\exp A_{ik_i}\sum_{k''}\exp A_{ik''}\delta_{k''k'}}{(\sum_{k''}\exp A_{ik''})^2}=
+\end{displaymath}
+\begin{displaymath}
+=\frac{\exp A_{ik_i}\delta_{k_ik'}\sum_{k''}\exp A_{ik''}-\exp A_{ik_i}\exp A_{ik'}}{(\sum_{k''}\exp A_{ik''})^2}=\frac{\exp A_{ik_i}}{\sum_{k''}\exp A_{ik''}}\left(\delta_{k_ik'}-\frac{\exp A_{ik'}}{\sum_{k''}\exp A_{ik''}}\right)=
+\end{displaymath}
+\begin{displaymath}
+=P_{ik_i}(\delta_{k_ik'}-P_{ik'})
+\end{displaymath}
+Zajmijmy się drugim członem iloczynu
+\begin{displaymath}
+A_{ik'}=\sum_{j'}X_{ij'}p_{j'k'}
+\end{displaymath}
+Ze wzoru na pochodną sumy
+\begin{displaymath}
+\frac{\partial A_{ik'}}{\partial p_{jk}}=\sum_{j'}X_{ij'}\delta_{j'j}\delta_{k'k}=X_{ij}\delta_{k'k}
+\end{displaymath}
+Ostatecznie pochodna prawdopodobieństwa wynosi
+\begin{displaymath}
+\frac{\partial P_{ik_i}}{\partial p_{jk}}=\sum_{k'}P_{ik_i}(\delta_{k_ik'}-P_{ik'})X_{ij}\delta_{k'k}=P_{ik_i}(\delta_{k_ik}-P_{ik})X_{ij}
+\end{displaymath}
+Pochodna straty
+\begin{displaymath}
+\frac{\partial L}{\partial p_{jk}}=-\sum_i\frac{1}{P_{ik_i}}P_{ik_i}(\delta_{k_ik}-P_{ik})X_{ij}=-\sum_i(\delta_{k_ik}-P_{ik})X_{ij}=\sum_iX^T_{ji}(P_{ik}-\delta_{k_ik})
+\end{displaymath}
+Ostatnia postać jest przystosowana do numerycznych obliczeń macierzowych.
+
+\section{Dokładność obliczeń}
+
+W regresji logistycznej prawdopodobieństwo $P_{ik}$ wyraża się przez aktywacje $A_{ik}$ funkcją softmax
+\begin{displaymath}
+P_{ik}=\frac{\exp A_{ik}}{\sum_{k'}\exp A_{ik'}}
+\end{displaymath}
+Funkcja ta jest niezmiennicza ze względu na zmiany aktywacji $A_{ik}$ o niezależną od $k$ stałą addytywną $A_i$
+\begin{displaymath}
+\frac{\exp(A_i+A_{ik})}{\sum_{k'}\exp(A_i+A_{ik'})}=\frac{\exp A_{ik}}{\sum_{k'}\exp A_{ik'}}=P_{ik}
+\end{displaymath}
+Jednak obliczone numerycznie wartości $P_{ik}$ zależą od $A_i$ tak bardzo, że dla dużych $A_i$ mogą być całkowicie błędne. Na szczęście strata
+\begin{displaymath}
+L=-\sum_i\log P_{ik_i}
+\end{displaymath}
+zależy tylko od logarytmów $P_{ik}$, które można obliczyć numerycznie w specjalny sposób eliminujący przedstawione niedokładności. Taki specjalny sposób jest zaimplementowany w funkcjach biblioteki pytorch, które liczą od razu logarytm funkcji softmax. Dlatego należy używać wyłącznie tych funkcji i nigdy nie liczyć straty ręcznie, obliczając najpierw wartość funkcji softmax a potem jej logarytm. Jeżeli potrzebne są prawdopodobieństwa $P_{ik}$, czyli wartości funkcji softmax, to nie należy ich liczyć ręcznie obliczając eksponensy. Zamiast tego należy korzystać z bibliotecznej wersji funkcji softmax, która zmniejsza przedstawione niedokładności, choć nie usuwa ich zupełnie. Na szczęście w zagadnieniu klasyfikacji nie musimy znać dokładnych wartości $P_{ik}$ lecz jedynie wiedzieć, która z nich jest największa dla ustalonego $i$. $P_{ik}$ jest oczywiście największe dla tego $k$, dla którego największe jest $A_{ik}$. Dlatego klasyfikacji możemy dokonać na podstawie samych aktywacji, w ogóle nie obliczając prawdopodobieństw. Eliminuje to również konieczność obliczania funkcji softmax, czyli przyspiesza obliczenia.
+
+\section{Entropia krzyżowa}
+
+Dana jest zmienna losowa $k$ oraz znormalizowane rozkłady prawdopodobieństwa $p_k$ i $q_k$. Entropia krzyżowa
+\begin{displaymath}
+H=-\E_q[\log p]=-\sum_kq_k\log p_k
+\end{displaymath}
+jest tym większa im bardziej rozkład $p_k$ odbiega od rozkładu $q_k$. Jeżeli dla jakiegoś $k_i$ rozkład $q_k=\delta_{k_ik}$, to
+\begin{displaymath}
+H=-\sum_k\delta_{k_ik}\log p_k=-\log p_{k_i}
+\end{displaymath}
+W regresji logistycznej funkcja straty wynosi
+\begin{displaymath}
+L=-\sum_i\log P_{ik_i}=\sum_i\left(-\sum_k\delta_{k_ik}\log P_{ik}\right)=\sum_i\left(-\sum_kQ_{ik}\log P_{ik}\right)=\sum_iH_i
+\end{displaymath}
+$Q_{ik}=\delta_{k_ik}$ oraz $P_{ik}$ są odpowiednio rzeczywistym oraz wyliczonym z modelu prawdopodobieństwem przynależności próbki $i$ do klasy $k$. $H_i$ jest więc entropią krzyżową wyliczonego rozkładu prawdopodobieństwa $P_{ik}$ względem rzeczywistego rozkładu $Q_{ik}$ dla pojedynczej próbki $i$ zaś strata $L$ jest sumą tych entropii po wszystkich próbkach.
+
+\section{Powierzchnia klasyfikacji}
+
+W regresji logistycznej prawdopodobieństwo przynależności próbki $i$ do klasy $k$ wynosi
+\begin{displaymath}
+P_{ik}=\frac{\exp A_{ik}}{\sum_{k'}\exp A_{ik'}} ~~~ A_{ik}=\sum_jX_{ij}p_{jk}
+\end{displaymath}
+Mówiąc o pojedynczej próbce dla uproszczenia opuszczamy index $i$
+\begin{displaymath}
+P_k=\frac{\exp A_k}{\sum_{k'}\exp A_{k'}} ~~~ A_k=\sum_jX_jp_{jk}
+\end{displaymath}
+W przypadku dwóch klas
+\begin{displaymath}
+P_0=\frac{\exp A_0}{\exp A_0+\exp A_1} ~~~ P_1=\frac{\exp A_1}{\exp A_0+\exp A_1}
+\end{displaymath}
+Powierzchnia rozgraniczająca klasy to $P_0=P_1=1/2$, czyli
+\begin{displaymath}
+\frac{\exp A_0}{\exp A_0+\exp A_1}=\frac{\exp A_1}{\exp A_0+\exp A_1}=\frac{1}{2}
+\end{displaymath}
+Innymi słowy, $A_0=A_1$, czyli
+\begin{displaymath}
+\sum_jX_jp_{j0}=\sum_jX_jp_{j1}
+\end{displaymath}
+Można to zapisać jako
+\begin{displaymath}
+\sum_jX_j(p_{j0}-p_{j1})=0
+\end{displaymath}
+Jest to równanie płaszczyzny w przestrzeni cech $X_j$. W przypadku dwóch klas powierzchnią klasyfikacji jest więc płaszczyzna. W przypadku większej liczby klas powierzchnia klasyfikacji składa się z wycinków płaszczyzn. Regresja logistyczna jest więc klasyfikatorem liniowym.
+
+\end{document}
